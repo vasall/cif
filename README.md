@@ -19,6 +19,8 @@ struct image_header {
 	char name[256];
 	char image_type;
 	char image_format;
+	unsigned int width;
+	unsigned int height;
 	unsigned int mipmap_level;
 	size_t size;
 };
@@ -27,6 +29,8 @@ Immediately afterwards, the image data follows
 - `name` is the name of the image
 - `image_type` is the type of the image. See [Image Types](#Image-Types) for more details
 - `image_format` is the format of the image. See [Image Formats](#Image-Formats) for more details
+- `width` is the width of the image
+- `height` is the height of the image
 - `mipmap_level` is the mipmap level of the image. The original IMage should have level 0
 - `size` is the size of the following image data
 ## Image Types
@@ -60,10 +64,10 @@ IMAGE_TYPE_ENVIRONMENT_COMPRESSED = 138
 The difference between format and format_COMPRESSED is that format_COMPRESSED is zlib compressed
 ## Image Formats
 ```
-IMAGE_FORMAT_R8G8B8
-IMAGE_FORMAT_R8G8B8A8
-IMAGE_FORMAT_R32G32B32
-IMAGE_FORMAT_R32G32B32A32
+IMAGE_FORMAT_R8G8B8 = 0
+IMAGE_FORMAT_R8G8B8A8 = 1
+IMAGE_FORMAT_R32G32B32 = 2
+IMAGE_FORMAT_R32G32B32A32 = 3
 ```
 ## License
 The file format is free of known copyright restrictions (Public Domain)
