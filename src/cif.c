@@ -13,6 +13,8 @@ typedef struct cif_file {
 	char *data;
 	size_t size;
 	FILE *file;
+	void *extra_alloc[100];
+	size_t extra_alloc_num;
 } cif_file;
 
 cif_file *cif_load(const char *path) {
@@ -37,6 +39,7 @@ cif_file *cif_load(const char *path) {
 		goto err_file;
 
 	cif->file = NULL;
+	cif->extra_alloc_num = 0;
 
 	fseek(file, 0, SEEK_END);
 	cif->size = ftell(file)-5;
@@ -66,6 +69,7 @@ err:
 cif_image *cif_get_images(cif_file *cif, size_t *image_count) {
 	char *current;
 	cif_image *images;
+	int err;
 
 	if(!cif->size)
 		return NULL;
@@ -100,15 +104,70 @@ cif_image *cif_get_images(cif_file *cif, size_t *image_count) {
 		images[*image_count].data = current;
 		current+= images[*image_count].size;
 
+		if(images[*image_count].image_format >= 127) {
+			z_stream stream;
+			unsigned char *data = NULL;
+			size_t size;
+
+			size = images[*image_count].size;
+
+			stream.zalloc = Z_NULL;
+			stream.zfree = Z_NULL;
+			stream.opaque = Z_NULL;
+			stream.avail_in = images[*image_count].size;
+			stream.next_in = images[*image_count].data;
+			stream.total_in = 0;
+			stream.total_out = 0;
+
+			err = inflateInit(&stream);
+
+			if(err != Z_OK) {
+				fprintf(stderr, "Compression error %s\n", zError(err));
+				free(images);
+				return NULL;
+			}
+
+			while(stream.avail_in) {
+				size *= 2;
+				data = realloc(data, size);
+				if(!data) {
+					free(images);
+					return NULL;
+				}
+				stream.avail_out = size-stream.total_out;
+				stream.next_out = data + stream.total_in;
+				err = inflate(&stream, Z_NO_FLUSH);
+				if(err < 0) {
+					free(data);
+					fprintf(stderr, "Compression error %s\n", zError(err));
+					free(images);
+					return NULL;
+				}
+			}
+
+			cif->extra_alloc[cif->extra_alloc_num] = data;
+			cif->extra_alloc_num += 1;
+
+			images[*image_count].size = stream.total_out;
+			images[*image_count].data = data;
+
+			inflateEnd(&stream);
+			
+		}
+
 		*image_count+=1;
 	}
 	return images;
 }
 
 int cif_clean(cif_file *cif) {
+	size_t i;
 
 	if(cif->file)
 		fclose(cif->file);
+	for(i = 0; i < cif->extra_alloc_num; i++) {
+		free(cif->extra_alloc[i]);
+	}
 	free(cif->data);
 	free(cif);
 	return 0;
@@ -159,7 +218,39 @@ int cif_write_image(cif_file *cif, cif_image image) {
 	fwrite(&image.mipmap_level, 1, sizeof(unsigned int), cif->file);
 
 	if(image.image_type >= 127) {
-		
+		z_stream stream;
+		unsigned char *data;
+		int err;
+
+		data = malloc(image.size);
+		if(!data)
+			return -1;
+
+		stream.zalloc = Z_NULL;
+		stream.zfree = Z_NULL;
+		stream.opaque = Z_NULL;
+		stream.avail_in = image.size;
+		stream.next_in = image.data;
+		stream.avail_out = image.size;
+		stream.next_out = data;
+
+		err = deflateInit(&stream, Z_DEFAULT_COMPRESSION);
+		if(err != Z_OK) {
+			fprintf(stderr, "Compression error %s\n", zError(err));
+			return -1;
+		}
+		err = deflate(&stream, Z_FINISH);
+		if(err < 0) {
+			fprintf(stderr, "Compression error %s\n", zError(err));
+			return -1;
+		}
+
+		fwrite(&stream.total_out, 1, sizeof(size_t), cif->file);
+		fwrite(data, 1, stream.total_out, cif->file);
+
+		deflateEnd(&stream);
+
+		free(data);
 	} else {
 		fwrite(&image.size, 1, sizeof(size_t), cif->file);
 		fwrite(image.data, 1, image.size, cif->file);
