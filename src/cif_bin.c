@@ -1,7 +1,11 @@
+#include <fcntl.h>
 #include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/sendfile.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <png.h>
@@ -95,9 +99,16 @@ static void list_images(size_t image_count, cif_image *images) {
 	}
 }
 
-static void add_images(cif_file *cif, int argc, char const *argv[]) {
+static void add_images(const char *cif_path, int argc, char *argv[]) {
 	unsigned int i;
 	size_t image_count;
+	cif_file *cif;
+
+	cif = cif_create(cif_path);
+	if(!cif) {
+		fprintf(stderr, "Couldn't create file\n");
+		exit(EXIT_FAILURE);
+	}
 
 	if(argc <= optind+1) {
 		fprintf(stderr, "No image files specified\n");
@@ -130,12 +141,13 @@ static void add_images(cif_file *cif, int argc, char const *argv[]) {
 		char type[3];
 		int ty;
 
+		memset(&png, 0, sizeof(png_image));
 		png.version = PNG_IMAGE_VERSION;
 		png.opaque = NULL;
 
-		if(png_image_begin_read_from_file(&png, argv[index]) != 0) {
-			png_image_free(&png);
+		if(png_image_begin_read_from_file(&png, argv[index]) <= 0) {
 			fprintf(stderr, "%s\n", png.message);
+			png_image_free(&png);
 			exit(EXIT_FAILURE);
 		}
 		png.format = PNG_FORMAT_RGBA;
@@ -145,7 +157,7 @@ static void add_images(cif_file *cif, int argc, char const *argv[]) {
 			fprintf(stderr, "Memory allocation failed\n");
 			exit(EXIT_FAILURE);
 		}
-		if(png_image_finish_read(&png, NULL, data, 0, NULL) != 0) {
+		if(png_image_finish_read(&png, NULL, data, 0, NULL) <= 0) {
 			png_image_free(&png);
 			free(data);
 			fprintf(stderr, "%s\n", png.message);
@@ -184,6 +196,72 @@ static void add_images(cif_file *cif, int argc, char const *argv[]) {
 		free(data);
 		free(image_name);
 	}
+}
+
+static int replace(const char *old_file, const char *new_file) {
+	struct stat old_stat, new_stat;
+	int old_fd, new_fd;
+
+	if(stat(old_file, &old_stat) < 0)
+		return -1;
+	if(stat(new_file, &new_stat) < 0)
+		return -1;
+
+	if(remove(old_file) < 0) {
+		perror("");
+		return -1;
+	}
+
+	old_fd = open(new_file, O_RDONLY);
+	if(old_fd < 0)
+		return -1;
+	new_fd = open(old_file, O_CREAT | O_WRONLY, old_stat.st_mode);
+	if(new_fd < 0)
+		return -1;
+
+	if(sendfile(new_fd, old_fd, NULL, new_stat.st_size) < 0)
+		return -1;
+
+	close(old_fd);
+	close(new_fd);
+
+	if(remove(new_file) < 0) {
+		perror("");
+		return -1;
+	}
+
+	return 0;
+}
+
+static void del_images(char *cif_path, int argc, char *argv[], size_t image_count, cif_image *images) {
+	unsigned int i;
+	cif_file *cif = cif_create("/tmp/tmp.cif");
+
+	if(!cif) {
+		fprintf(stderr, "What?\n");
+		exit(EXIT_FAILURE);
+	}
+
+	for(i = 0; i < image_count; i++) {
+		int j;
+		int removable = 0;
+		
+		for(j = 0; j < (argc - optind - 1); j++) {
+			int index = argc - optind + 1 + j;
+			if(!strcmp(images[i].name, argv[index])) {
+				removable = 1;
+				break;
+			}
+		}
+
+		if(!removable) {
+			cif_write_image(cif, images[i]);
+		}
+	}
+
+	cif_clean(cif);
+
+	replace(cif_path, "/tmp/tmp.cif");
 }
 
 static void print_help(const char *prog_name) {
@@ -279,11 +357,13 @@ int main(int argc, char *argv[]) {
 			break;
 
 		case OP_ADD:
-			add_images(cif, argc, argv);
+			cif_clean(cif);
+			add_images(argv[optind], argc, argv);
 			break;
 
 		case OP_DEL:
-			del_images(cif, argc, argv);
+			cif_clean(cif);
+			del_images(argv[optind], argc, argv, image_count, images);
 			break;
 	}
 

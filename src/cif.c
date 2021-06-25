@@ -184,7 +184,7 @@ cif_file *cif_create(const char *path) {
 	cif->size = 0;
 	cif->data = NULL;
 
-	cif->file = fopen(path, "wb");
+	cif->file = fopen(path, "ab");
 	if(!cif->file)
 		goto err_cif;
 
