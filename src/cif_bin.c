@@ -1,10 +1,18 @@
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+#include <png.h>
+
 #define CIF_WRITE
 #include "cif.h"
+
+#define CHECK_OP(op) if(op != OP_NULL) {\
+	fprintf(stderr, "You can do only one operation per command\n");\
+	print_help(argv[0]);\
+	exit(EXIT_FAILURE); }
 
 static char *get_image_type_str(enum cif_image_type type) {
 	switch (type) {
@@ -74,10 +82,6 @@ static char *get_image_format_str(enum cif_image_format format) {
 	return "";
 }
 
-static void print_interactive_help() {
-	return;
-}
-
 static void list_images(size_t image_count, cif_image *images) {
 	unsigned int i;
 
@@ -91,45 +95,163 @@ static void list_images(size_t image_count, cif_image *images) {
 	}
 }
 
-static void add_image(const char *file) {
-	(void) file;
-	return;
+static void add_images(cif_file *cif, int argc, char const *argv[]) {
+	unsigned int i;
+	size_t image_count;
+
+	if(argc <= optind+1) {
+		fprintf(stderr, "No image files specified\n");
+		exit(EXIT_FAILURE);
+	}
+
+	image_count = argc - optind - 1;
+
+	printf("Please select the image type. Possible values are:\n");
+	printf("Albedo (normal): 0\n");
+	printf("Roughness map: 1\n");
+	printf("Metallic map: 2\n");
+	printf("Normal map: 3\n");
+	printf("AO: 4\n");
+	printf("Cube map positive x: 5\n");
+	printf("Cube map negative x: 6\n");
+	printf("Cube map positive y: 7\n");
+	printf("Cube map negative y: 8\n");
+	printf("Cube map positive z: 9\n");
+	printf("Cube map negative z: 10\n");
+	printf("Environment map: 11\n");
+
+	for(i = 0; i < image_count; i++) {
+		png_image png;
+		char *data;
+		cif_image image;
+		char *extension;
+		char *image_name;
+		unsigned int index = argc - optind + 1 + i;
+		char type[3];
+		int ty;
+
+		png.version = PNG_IMAGE_VERSION;
+		png.opaque = NULL;
+
+		if(png_image_begin_read_from_file(&png, argv[index]) != 0) {
+			png_image_free(&png);
+			fprintf(stderr, "%s\n", png.message);
+			exit(EXIT_FAILURE);
+		}
+		png.format = PNG_FORMAT_RGBA;
+		data = malloc(PNG_IMAGE_SIZE(png));
+		if(!data) {
+			png_image_free(&png);
+			fprintf(stderr, "Memory allocation failed\n");
+			exit(EXIT_FAILURE);
+		}
+		if(png_image_finish_read(&png, NULL, data, 0, NULL) != 0) {
+			png_image_free(&png);
+			free(data);
+			fprintf(stderr, "%s\n", png.message);
+			exit(EXIT_FAILURE);
+		}
+		png_image_free(&png);
+
+		image_name = strdup(argv[index]);
+		extension = strrchr(image_name, '.');
+		extension[0] = '\0';
+
+		image.name = basename(image_name);
+		image.image_type = CIF_IMAGE_TYPE_ALBEDO;
+		image.image_format = CIF_IMAGE_FORMAT_R8G8B8A8;
+		image.width = png.width;
+		image.height = png.height;
+		image.mipmap_level = 0;
+		image.size = PNG_IMAGE_SIZE(png);
+		image.data = data;
+
+		printf("Please select the image type for %s:", image.name);
+		fflush(stdout);
+		fgets(type, 3, stdin);
+		type[2] = '\0';
+		ty = atoi(type);
+
+		image.image_type = ty;
+
+		if(cif_write_image(cif, image) < 0) {
+			free(data);
+			free(image_name);
+			fprintf(stderr, "Couldn't write image %s\n", image.name);
+			exit(EXIT_FAILURE);
+		}
+		
+		free(data);
+		free(image_name);
+	}
 }
 
 static void print_help(const char *prog_name) {
-	printf("Usage: %s [options] <file>\n\n", prog_name);
-	printf("If no options are provided, the program will start the interactive mode\n");
-	printf("Options are:\n");
+	printf("Usage: %s <operation> [options] <cif-file> [image...]\n\n", prog_name);
+	printf("Operations are:\n");
 	printf("\t-h Show this help\n");
-	printf("\t-l List images in file\n");
+	printf("\t-l List images in cif file\n");
+	printf("\t-a Add image[s] to cif file\n");
+	printf("\t-d Delete image[s] from cif file\n\n");
+	printf("Options are:\n");
+	printf("\t-c Compress newly added images\n");
+	printf("\t-m Generate mip maps for new images\n");
+	printf("\t-v Show verbose output\n");
 }
 
-int main(int argc, char *argv[])
-{
+enum operation {
+	OP_NULL,
+	OP_LIST,
+	OP_ADD,
+	OP_DEL
+};
+
+int main(int argc, char *argv[]) {
 	int opt;
-	int list = 0;
+	enum operation op = OP_NULL;
+	char verbose = 0;
+	char compress = 0;
+	char mipmap = 0;
 	cif_file *cif;
 	size_t image_count;
 	cif_image *images;
-	char cmd[100];
 
-	while((opt = getopt(argc, argv, "hl")) != -1) {
-		switch(opt) {
+	while((opt = getopt(argc, argv, "hladcmv")) != -1) {
+		switch (opt) {
 			case 'h':
 				print_help(argv[0]);
 				exit(EXIT_SUCCESS);
 				break;
 			case 'l':
-				list = 1;
+				CHECK_OP(op);
+				op = OP_LIST;
 				break;
-			default:
+			case 'a':
+				CHECK_OP(op);
+				op = OP_ADD;
+				break;
+			case 'd':
+				CHECK_OP(op);
+				op = OP_DEL;
+				break;
+			case 'c':
+				compress = 1;
+				break;
+			case 'm':
+				mipmap = 1;
+				break;
+			case 'v':
+				verbose = 1;
+				break;
+			case '?':
 				print_help(argv[0]);
 				exit(EXIT_FAILURE);
+				break;
 		}
 	}
 
 	if(optind >= argc) {
-		fprintf(stderr, "Expected file\n\n");
+		fprintf(stderr, "Expected cif file after options\n");
 		print_help(argv[0]);
 		exit(EXIT_FAILURE);
 	}
@@ -145,31 +267,27 @@ int main(int argc, char *argv[])
 
 	images = cif_get_images(cif, &image_count);
 
-	if(list) {
-		list_images(image_count, images);
-		exit(EXIT_SUCCESS);
-	}
-
-	/* Go into interactive mode */
-	printf(">");
-	fflush(stdout);
-	while(fgets(cmd, 100, stdin) != NULL) {
-		if(!strcmp(cmd, "quit\n")) {
+	switch (op) {
+		case OP_NULL:
+			fprintf(stderr, "Please specify an operation\n");
+			print_help(argv[0]);
+			exit(EXIT_FAILURE);
 			break;
-		} else if(!strcmp(cmd, "help\n")) {
-			print_interactive_help();
-		} else if(!strcmp(cmd, "list\n")) {
-			list_images(image_count, images);
-		} else if(!strncmp(cmd, "add ", 4)) {
-			add_image(cmd+4);
-		} else if(cmd[0] != '\n') {
-			printf("Unrecognized command. Type 'help' for list of available commands\n");
-		}
 
-		printf(">");
-		fflush(stdout);
+		case OP_LIST:
+			list_images(image_count, images);
+			break;
+
+		case OP_ADD:
+			add_images(cif, argc, argv);
+			break;
+
+		case OP_DEL:
+			del_images(cif, argc, argv);
+			break;
 	}
 
+	free(images);
 	cif_clean(cif);
 	return 0;
 }
