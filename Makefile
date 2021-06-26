@@ -1,4 +1,5 @@
 DEBUG ?= 1
+NO_ZLIB ?= 0
 
 CC ?= gcc
 AR ?= gcc-ar
@@ -24,8 +25,15 @@ LDFLAGS_LIB_SHARED := -shared $(LDFLAGS)
 TARGET_LIB_STATIC := lib$(TARGET_LIB).a
 TARGET_LIB_SHARED := lib$(TARGET_LIB).so
 
-LDLIBS_BIN := $(TARGET_LIB_STATIC) -lz -lpng
-LDLIBS_SHARED := -lz
+LDLIBS_BIN := $(TARGET_LIB_STATIC) -lpng
+LDLIBS_SHARED :=
+
+ifeq ($(NO_ZLIB), 1)
+	CFLAGS += -DNO_ZLIB
+	CFLAGS_LIB_SHARED += -DNO_ZLIB
+	LDLIBS_BIN += -lz
+	LDLIBS_SHARED += -lz
+endif
 
 SOURCES_BIN := src/cif_bin.c
 SOURCES_LIB := src/cif.c
