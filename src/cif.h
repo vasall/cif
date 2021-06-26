@@ -24,6 +24,7 @@ freely, subject to the following restrictions:
 #define CIF_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 typedef struct cif_file cif_file;
 
@@ -66,23 +67,19 @@ typedef struct cif_image {
 	char *name;
 	enum cif_image_type image_type;
 	enum cif_image_format image_format;
-	unsigned int width;
-	unsigned int height;
-	unsigned int mipmap_level;
+	uint32_t width;
+	uint32_t height;
+	uint32_t mipmap_level;
 	size_t size;
-	void *data;
+	char *data;
 } cif_image;
 
-cif_file *cif_load(const char *path);
+cif_file *cif_open(const char *path);
 
 cif_image *cif_get_images(cif_file *cif, size_t *image_count);
 
 int cif_clean(cif_file *cif);
 
-#ifdef CIF_WRITE
-cif_file *cif_create(const char *path);
-
 int cif_write_image(cif_file *cif, cif_image image);
-#endif /* CIF_WRITE */
 
 #endif /* CIF_H */

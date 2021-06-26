@@ -99,16 +99,9 @@ static void list_images(size_t image_count, cif_image *images) {
 	}
 }
 
-static void add_images(const char *cif_path, int argc, char *argv[]) {
+static void add_images(cif_file *cif, int argc, char *argv[]) {
 	unsigned int i;
 	size_t image_count;
-	cif_file *cif;
-
-	cif = cif_create(cif_path);
-	if(!cif) {
-		fprintf(stderr, "Couldn't create file\n");
-		exit(EXIT_FAILURE);
-	}
 
 	if(argc <= optind+1) {
 		fprintf(stderr, "No image files specified\n");
@@ -235,7 +228,7 @@ static int replace(const char *old_file, const char *new_file) {
 
 static void del_images(char *cif_path, int argc, char *argv[], size_t image_count, cif_image *images) {
 	unsigned int i;
-	cif_file *cif = cif_create("/tmp/tmp.cif");
+	cif_file *cif = cif_open("/tmp/tmp.cif");
 
 	if(!cif) {
 		fprintf(stderr, "What?\n");
@@ -334,16 +327,17 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	cif = cif_load(argv[optind]);
+	cif = cif_open(argv[optind]);
 	if(!cif) {
-		cif = cif_create(argv[optind]);
-		if(!cif) {
-			fprintf(stderr, "Couldn't create file %s\n", argv[optind]);
-			exit(EXIT_FAILURE);
-		}
+		fprintf(stderr, "Couldn't create file %s\n", argv[optind]);
+		exit(EXIT_FAILURE);
 	}
 
 	images = cif_get_images(cif, &image_count);
+	if(!images && image_count) {
+		fprintf(stderr, "Why aren't there images?\n");
+		exit(EXIT_FAILURE);
+	}
 
 	switch (op) {
 		case OP_NULL:
@@ -357,8 +351,7 @@ int main(int argc, char *argv[]) {
 			break;
 
 		case OP_ADD:
-			cif_clean(cif);
-			add_images(argv[optind], argc, argv);
+			add_images(cif, argc, argv);
 			break;
 
 		case OP_DEL:

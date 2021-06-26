@@ -17,13 +17,24 @@ typedef struct cif_file {
 	size_t extra_alloc_num;
 } cif_file;
 
-cif_file *cif_load(const char *path) {
+cif_file *cif_open(const char *path) {
+	char new = 0;
 	FILE *file;
 	char magic_ref[] = CIF_MAGIC;
 	char magic[5];
 	cif_file *cif;
+
+	if(access(path, F_OK) < 0) {
+		new = 1;
+	}
 	
-	file = fopen(path, "rb");
+	file = fopen(path, "a+b");
+
+	if(new) {
+		fwrite(magic_ref, 1, 5, file);
+		fflush(file);
+		fseek(file, 0, SEEK_SET);
+	}
 
 	if(!file)
 		goto err;
@@ -38,7 +49,7 @@ cif_file *cif_load(const char *path) {
 	if(!cif)
 		goto err_file;
 
-	cif->file = NULL;
+	cif->file = file;
 	cif->extra_alloc_num = 0;
 
 	fseek(file, 0, SEEK_END);
@@ -51,8 +62,6 @@ cif_file *cif_load(const char *path) {
 
 	if(fread(cif->data, 1, cif->size, file) != cif->size)
 		goto err_data;
-
-	fclose(file);
 
 	return cif;
 
@@ -84,22 +93,28 @@ cif_image *cif_get_images(cif_file *cif, size_t *image_count) {
 		} else {
 			images = malloc(sizeof(cif_image));
 		}
-		if(!images)
+		if(!images) {
+			printf("wtf?\n");
 			return NULL;
+		}
 
 		images[*image_count].name = current;
 		current+=256;
 		images[*image_count].image_type = *current;
-		current++;
+		current+=1;
 		images[*image_count].image_format = *current;
-		current++;
-		images[*image_count].width = (unsigned int)*current;
-		current+=sizeof(unsigned int);
-		images[*image_count].height = (unsigned int)*current;
-		current+=sizeof(unsigned int);
-		images[*image_count].mipmap_level = (unsigned int)*current;
-		current+=sizeof(unsigned int);
-		images[*image_count].size = (size_t)*current;
+		current+=1;
+		memcpy(&images[*image_count].width, current, sizeof(uint32_t));
+		/*images[*image_count].width = (uint32_t)*current;*/
+		current+=sizeof(uint32_t);
+		memcpy(&images[*image_count].height, current, sizeof(uint32_t));
+		/*images[*image_count].height = (uint32_t)*current;*/
+		current+=sizeof(uint32_t);
+		memcpy(&images[*image_count].mipmap_level, current, sizeof(uint32_t));
+		/*images[*image_count].mipmap_level = (uint32_t)*current;*/
+		current+=sizeof(uint32_t);
+		memcpy(&images[*image_count].size, current, sizeof(uint32_t));
+		/*images[*image_count].size = (size_t)*current;*/
 		current+=sizeof(size_t);
 		images[*image_count].data = current;
 		current+= images[*image_count].size;
@@ -115,7 +130,7 @@ cif_image *cif_get_images(cif_file *cif, size_t *image_count) {
 			stream.zfree = Z_NULL;
 			stream.opaque = Z_NULL;
 			stream.avail_in = images[*image_count].size;
-			stream.next_in = images[*image_count].data;
+			stream.next_in = (unsigned char *)images[*image_count].data;
 			stream.total_in = 0;
 			stream.total_out = 0;
 
@@ -131,6 +146,7 @@ cif_image *cif_get_images(cif_file *cif, size_t *image_count) {
 				size *= 2;
 				data = realloc(data, size);
 				if(!data) {
+					printf("TODO: Fix compression\n");
 					free(images);
 					return NULL;
 				}
@@ -149,7 +165,7 @@ cif_image *cif_get_images(cif_file *cif, size_t *image_count) {
 			cif->extra_alloc_num += 1;
 
 			images[*image_count].size = stream.total_out;
-			images[*image_count].data = data;
+			images[*image_count].data = (char *)data;
 
 			inflateEnd(&stream);
 			
@@ -173,31 +189,6 @@ int cif_clean(cif_file *cif) {
 	return 0;
 }
 
-cif_file *cif_create(const char *path) {
-	cif_file *cif;
-	char magic[] = CIF_MAGIC;
-
-	cif = malloc(sizeof(cif_file));
-	if(!cif)
-		goto err;
-
-	cif->size = 0;
-	cif->data = NULL;
-
-	cif->file = fopen(path, "ab");
-	if(!cif->file)
-		goto err_cif;
-
-	fwrite(magic, 1, 5, cif->file);
-
-	return cif;
-
-err_cif:
-	free(cif);
-err:
-	return NULL;
-}
-
 int cif_write_image(cif_file *cif, cif_image image) {
 	char name[256];
 	char tmp;
@@ -213,9 +204,9 @@ int cif_write_image(cif_file *cif, cif_image image) {
 	fwrite(&tmp, 1, 1, cif->file);
 	tmp = image.image_format;
 	fwrite(&tmp, 1, 1, cif->file);
-	fwrite(&image.width, 1, sizeof(unsigned int), cif->file);
-	fwrite(&image.height, 1, sizeof(unsigned int), cif->file);
-	fwrite(&image.mipmap_level, 1, sizeof(unsigned int), cif->file);
+	fwrite(&image.width, 1, sizeof(uint32_t), cif->file);
+	fwrite(&image.height, 1, sizeof(uint32_t), cif->file);
+	fwrite(&image.mipmap_level, 1, sizeof(uint32_t), cif->file);
 
 	if(image.image_type >= 127) {
 		z_stream stream;
@@ -230,7 +221,7 @@ int cif_write_image(cif_file *cif, cif_image image) {
 		stream.zfree = Z_NULL;
 		stream.opaque = Z_NULL;
 		stream.avail_in = image.size;
-		stream.next_in = image.data;
+		stream.next_in = (unsigned char *)image.data;
 		stream.avail_out = image.size;
 		stream.next_out = data;
 
