@@ -203,13 +203,13 @@ cif_image *cif_get_images(cif_file *cif, size_t *image_count) {
 		current+=sizeof(uint32_t);
 		memcpy(&images[*image_count].mipmap_level, current, sizeof(uint32_t));
 		current+=sizeof(uint32_t);
-		memcpy(&images[*image_count].size, current, sizeof(uint32_t));
+		memcpy(&images[*image_count].size, current, sizeof(size_t));
 		current+=sizeof(size_t);
 		images[*image_count].data = current;
-		current+= images[*image_count].size;
+		current+=images[*image_count].size;
 
 #ifndef NO_ZLIB
-		if(images[*image_count].image_format >= 127) {
+		if(images[*image_count].image_type >= 127) {
 			size_t new_size;
 			char *new_data;
 			if(cif_uncompress(images[*image_count].size, images[*image_count].data,
@@ -224,7 +224,7 @@ cif_image *cif_get_images(cif_file *cif, size_t *image_count) {
 
 			images[*image_count].size = new_size;
 			images[*image_count].data = new_data;
-			images[*image_count].image_format -= 127;
+			images[*image_count].image_type -= 127;
 		}
 #endif /* NO_ZLIB */
 

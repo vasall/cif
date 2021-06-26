@@ -31,6 +31,7 @@ LDLIBS_SHARED :=
 ifeq ($(NO_ZLIB), 1)
 	CFLAGS += -DNO_ZLIB
 	CFLAGS_LIB_SHARED += -DNO_ZLIB
+else
 	LDLIBS_BIN += -lz
 	LDLIBS_SHARED += -lz
 endif

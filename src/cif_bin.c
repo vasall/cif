@@ -131,7 +131,7 @@ static void add_images(cif_file *cif, int argc, char *argv[]) {
 		char *extension;
 		char *image_name;
 		unsigned int index = argc - optind + 1 + i;
-		char type[3];
+		char type[4];
 		int ty;
 
 		memset(&png, 0, sizeof(png_image));
@@ -173,8 +173,8 @@ static void add_images(cif_file *cif, int argc, char *argv[]) {
 
 		printf("Please select the image type for %s:", image.name);
 		fflush(stdout);
-		fgets(type, 3, stdin);
-		type[2] = '\0';
+		fgets(type, 4, stdin);
+		type[3] = '\0';
 		ty = atoi(type);
 
 		image.image_type = ty;
@@ -226,7 +226,7 @@ static int replace(const char *old_file, const char *new_file) {
 	return 0;
 }
 
-static void del_images(char *cif_path, int argc, char *argv[], size_t image_count, cif_image *images) {
+static void del_images(int argc, char *argv[], size_t image_count, cif_image *images) {
 	unsigned int i;
 	cif_file *cif = cif_open("/tmp/tmp.cif");
 
@@ -254,7 +254,7 @@ static void del_images(char *cif_path, int argc, char *argv[], size_t image_coun
 
 	cif_clean(cif);
 
-	replace(cif_path, "/tmp/tmp.cif");
+	replace(argv[optind], "/tmp/tmp.cif");
 }
 
 static void print_help(const char *prog_name) {
@@ -355,8 +355,7 @@ int main(int argc, char *argv[]) {
 			break;
 
 		case OP_DEL:
-			cif_clean(cif);
-			del_images(argv[optind], argc, argv, image_count, images);
+			del_images(argc, argv, image_count, images);
 			break;
 	}
 
