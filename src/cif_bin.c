@@ -18,6 +18,8 @@
 	print_help(argv[0]);\
 	exit(EXIT_FAILURE); }
 
+static char compress;
+
 static char *get_image_type_str(enum cif_image_type type) {
 	switch (type) {
 		case CIF_IMAGE_TYPE_ALBEDO:
@@ -179,6 +181,9 @@ static void add_images(cif_file *cif, int argc, char *argv[]) {
 
 		image.image_type = ty;
 
+		if(compress)
+			image.image_type += 127;
+
 		if(cif_write_image(cif, image) < 0) {
 			free(data);
 			free(image_name);
@@ -266,7 +271,6 @@ static void print_help(const char *prog_name) {
 	printf("\t-d Delete image[s] from cif file\n\n");
 	printf("Options are:\n");
 	printf("\t-c Compress newly added images\n");
-	printf("\t-m Generate mip maps for new images\n");
 	printf("\t-v Show verbose output\n");
 }
 
@@ -281,13 +285,11 @@ int main(int argc, char *argv[]) {
 	int opt;
 	enum operation op = OP_NULL;
 	char verbose = 0;
-	char compress = 0;
-	char mipmap = 0;
 	cif_file *cif;
 	size_t image_count;
 	cif_image *images;
 
-	while((opt = getopt(argc, argv, "hladcmv")) != -1) {
+	while((opt = getopt(argc, argv, "hladcv")) != -1) {
 		switch (opt) {
 			case 'h':
 				print_help(argv[0]);
@@ -307,9 +309,6 @@ int main(int argc, char *argv[]) {
 				break;
 			case 'c':
 				compress = 1;
-				break;
-			case 'm':
-				mipmap = 1;
 				break;
 			case 'v':
 				verbose = 1;

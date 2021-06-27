@@ -2,72 +2,71 @@
 CIF is a file format, which can contain one or more different images with
 different formats including mip mapping. It is designed for use in game engines
 
-The file should have the file extension `.cif`
-## Header
-Every `.cif` file has to start with the magic
-```hex
-0x73 0x43 0x49 0x46 
-```
-Appending that the version of the file format
-```hex
-0x01
-```
+For information on the file format, see [File_format.md](File_format.md)
 
-After that, the file consists of an array of images with a special header
+## Content
+This repository contains:
+- The [file format specification](File_format.md)
+- libcif, a library for reading and writing cif files
+- cif, a program for creating and modifying cif files
+
+## Dependencies
+libcif has the dependency `zlib`. You can disable it by declaring `NO_ZLIB=1` when building
+
+cif has the additional dependency `libpng`
+## Building
+There are four build targets: `bin`, `shared`, `static` and `all`
+```sh
+make [NO_ZLIB=1] <all|bin|static|shared>
+```
+## cif
+```sh
+Usage: cif <operation> [options] <cif-file> [image...]
+
+Operations are:
+        -h Show this help
+        -l List images in cif file
+        -a Add image[s] to cif file
+        -d Delete image[s] from cif file
+
+Options are:
+        -c Compress newly added images
+        -v Show verbose output
+```
+## API
+See [cif.h](src/cif.h)
+## Example
 ```c
-struct image_header {
-	char name[256];
-	char image_type;
-	char image_format;
-	unsigned int width;
-	unsigned int height;
-	unsigned int mipmap_level;
-	size_t size;
-};
-```
-Immediately afterwards, the image data follows
-- `name` is the name of the image
-- `image_type` is the type of the image. See [Image Types](#Image-Types) for more details
-- `image_format` is the format of the image. See [Image Formats](#Image-Formats) for more details
-- `width` is the width of the image
-- `height` is the height of the image
-- `mipmap_level` is the mipmap level of the image. The original IMage should have level 0
-- `size` is the size of the following image data
-## Image Types
-```
-IMAGE_TYPE_ALBEDO = 0
-IMAGE_TYPE_ROUGHNESS = 1
-IMAGE_TYPE_METALLIC = 2
-IMAGE_TYPE_NORMAL = 3
-IMAGE_TYPE_AO = 4
-IMAGE_TYPE_CUBE_PX = 5
-IMAGE_TYPE_CUBE_NX = 6
-IMAGE_TYPE_CUBE_PY = 7
-IMAGE_TYPE_CUBE_NY = 8
-IMAGE_TYPE_CUBE_PZ = 9
-IMAGE_TYPE_CUBE_NZ = 10
-IMAGE_TYPE_ENVIRONMENT = 11
+#include <stdio.h>
+#include <stdlib.h>
 
-IMAGE_TYPE_ALBEDO_COMPRESSED = 127
-IMAGE_TYPE_ROUGHNESS_COMPRESSED = 128
-IMAGE_TYPE_METALLIC_COMPRESSED = 129
-IMAGE_TYPE_NORMAL_COMPRESSED = 130
-IMAGE_TYPE_AO_COMPRESSED = 131
-IMAGE_TYPE_CUBE_PX_COMPRESSED = 132
-IMAGE_TYPE_CUBE_NX_COMPRESSED = 133
-IMAGE_TYPE_CUBE_PY_COMPRESSED = 134
-IMAGE_TYPE_CUBE_NY_COMPRESSED = 135
-IMAGE_TYPE_CUBE_PZ_COMPRESSED = 136
-IMAGE_TYPE_CUBE_NZ_COMPRESSED = 137
-IMAGE_TYPE_ENVIRONMENT_COMPRESSED = 138
-```
-The difference between format and format_COMPRESSED is that format_COMPRESSED is zlib compressed
-## Image Formats
-```
-IMAGE_FORMAT_R8G8B8 = 0
-IMAGE_FORMAT_R8G8B8A8 = 1
-IMAGE_FORMAT_R32G32B32 = 2
-IMAGE_FORMAT_R32G32B32A32 = 3
+#include "cif.h"
+
+int main(void)
+{
+	cif_file *cif;
+	size_t image_count;
+	cif_image *images;
+	unsigned int i;
+
+	cif = cif_open("test.cif");
+	if(!cif)
+		return EXIT_FAILURE;
+
+	images = cif_get_images(cif, &image_count);
+	if(!images) {
+		cif_clean(cif);
+		return EXIT_FAILURE;
+	}
+
+	for(i = 0; i < image_count; i++) {
+		printf("%s: %ux%upx\n", images[i].name, images[i].width, images[i].height);
+	}
+
+	cif_clean(cif);
+
+	return EXIT_SUCCESS;
+}
 ```
 ## License
-The file format is free of known copyright restrictions (Public Domain)
+While the format has no copyright restrictions (see [File_format.md](File_format.md)) the software is licensed under the terms of the zlib license. See [LICENSE](LICENSE) for more details

@@ -74,12 +74,42 @@ typedef struct cif_image {
 	char *data;
 } cif_image;
 
+/**
+ * Open or create a cif file and load its content into memory
+ * 
+ * @path: The path to the cif file
+ * 
+ * Returns the cif_file handle or NULL if an error occured
+ */
 cif_file *cif_open(const char *path);
 
+/**
+ * Get the images of the cif file
+ * 
+ * @cif: The cif_file handle returned by cif_open()
+ * @image_count: The amount of images. Will be filled by the function
+ * 
+ * Returns an allocated array of cif_image structs or NULL if an error occured
+ */
 cif_image *cif_get_images(cif_file *cif, size_t *image_count);
 
+/**
+ * Free up any allocated space and close the cif file
+ * 
+ * @cif: The cif_file handle
+ * 
+ * Returns 0 on success or -1 if an error occured
+ */
 int cif_clean(cif_file *cif);
 
+/**
+ * Write a new image to the cif file
+ * 
+ * @cif: The cif_file handle
+ * @image: The cif_image struct of the new image
+ * 
+ * Returns 0 on success or -1 if an error occured
+ */
 int cif_write_image(cif_file *cif, cif_image image);
 
 #endif /* CIF_H */
