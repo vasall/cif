@@ -4,12 +4,17 @@ NO_ZLIB ?= 0
 CC ?= gcc
 AR ?= gcc-ar
 RM ?= rm -f
+CP ?= cp
 
 TARGET_BIN ?= cif
 TARGET_LIB ?= cif
 
 CFLAGS := -Wall -Wextra $(CFLAGS)
 LDFLAGS := -Wall -Wextra $(LDFLAGS)
+
+prefix ?= /usr/local
+bindir ?= bin
+libdir ?= lib
 
 ifeq ($(DEBUG), 1)
 	CFLAGS := -g -Og $(CFLAGS)
@@ -44,7 +49,7 @@ OBJECTS_LIB_STATIC := $(SOURCES_LIB:%.c=%.o)
 OBJECTS_LIB_SHARED := $(SOURCES_LIB:%.c=%.shared.o)
 
 
-.PHONY: all clean bin static shared
+.PHONY: all clean install uninstall bin static shared
 
 all: bin static shared
 
@@ -71,3 +76,13 @@ $(OBJECTS_LIB_SHARED): %.shared.o: %.c
 
 clean:
 	$(RM) $(TARGET_LIB_STATIC) $(TARGET_LIB_SHARED) $(TARGET_BIN) $(OBJECTS_BIN) $(OBJECTS_LIB_STATIC) $(OBJECTS_LIB_SHARED)
+
+install:
+	-$(CP) $(TARGET_BIN) $(DESTDIR)$(prefix)/$(bindir)
+	-$(CP) $(TARGET_LIB_STATIC) $(DESTDIR)$(prefix)/$(libdir)
+	-$(CP) $(TARGET_LIB_SHARED) $(DESTDIR)$(prefix)/$(libdir)
+
+uninstall:
+	$(RM) $(DESTDIR)$(prefix)/$(bindir)/$(TARGET_BIN)
+	$(RM) $(DESTDIR)$(prefix)/$(libdir)/$(TARGET_LIB_STATIC)
+	$(RM) $(DESTDIR)$(prefix)/$(libdir)/$(TARGET_LIB_SHARED)
