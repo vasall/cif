@@ -15,6 +15,9 @@ LDFLAGS := -Wall -Wextra $(LDFLAGS)
 prefix ?= /usr/local
 bindir ?= bin
 libdir ?= lib
+includedir ?= include
+datarootdir ?= share
+mandir ?= man
 
 ifeq ($(DEBUG), 1)
 	CFLAGS := -g -Og $(CFLAGS)
@@ -79,10 +82,14 @@ clean:
 
 install:
 	-$(CP) $(TARGET_BIN) $(DESTDIR)$(prefix)/$(bindir)
+	-$(CP) src/cif.h $(DESTDIR)$(prefix)/$(includedir)
 	-$(CP) $(TARGET_LIB_STATIC) $(DESTDIR)$(prefix)/$(libdir)
 	-$(CP) $(TARGET_LIB_SHARED) $(DESTDIR)$(prefix)/$(libdir)
+	-$(CP) cif.1 $(DESTDIR)$(prefix)/$(datarootdir)/$(mandir)
 
 uninstall:
 	$(RM) $(DESTDIR)$(prefix)/$(bindir)/$(TARGET_BIN)
+	$(RM) $(DESTDIR)$(prefix)/$(includedir)/cif.h
 	$(RM) $(DESTDIR)$(prefix)/$(libdir)/$(TARGET_LIB_STATIC)
 	$(RM) $(DESTDIR)$(prefix)/$(libdir)/$(TARGET_LIB_SHARED)
+	$(RM) $(DESTDIR)$(prefix)/$(datarootdir)/$(mandir)/cif.1

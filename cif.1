@@ -1,4 +1,4 @@
-.Dd 2021-06-28
+.Dd Jun 29, 2021
 .Dt CIF 1
 .Os Linux
 .Sh NAME
@@ -13,18 +13,31 @@
 .Op Ar image ...
 .Sh DESCRIPTION
 .Nm
-creates and modifies cif files
+creates and modifies cif files. It can only perform one operation at a time on a
+file. 
 
 The operations are as follows:
 .Bl -tag -width Ds
 .It Fl h
 Show a help message
 .It Fl a
-Add png images to the cif file
+Append images to the cif file. It reads the .png images specified after the cif
+file and converts them into the cif format.
+.Nm
+selects the base file name without extension as the name of the cif file and
+gives the user a prompt to select the image type
 .It Fl l
-List the contents of the cif file
+List the contents of the cif file. It will be displayed in the following format:
+
+Name
+.D1 Image type
+.D1 Image format
+.D1 width and height
+.D1 Mipmap Level:
+.D1 Size:
 .It Fl d
-Delete images by name from the cif file
+Delete images by name from the cif file. The arguments behind the cif file have
+to be the exact name of the image in the cif file that should be deleted
 .El
 
 The optional arguments are as follows:
@@ -34,5 +47,18 @@ Compress newly added images
 .It Fl v
 Print verbose information
 .El
+.Sh FILES
+.Pa cif_file
+is the cif file the operation should be executed on. If no such file exists, one
+will be created
+
+.Pa png images
+are the .png images that will be appended to the cif file, when using the
+.Fl a
+operation
+
+.Pa /tmp/tmp.cif
+is a temporary file used when deleting images. May be chaged in the future
 .Sh EXIT STATUS
 .Ex -std
+.Sh SEE ALSO
