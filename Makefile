@@ -34,7 +34,7 @@ MANPAGE = cif.1
 TARGET_STATIC = lib$(TARGET_LIB).a
 TARGET_SHARED = lib$(TARGET_LIB).so
 
-_CFLAGS = -Wall -Wextra
+_CFLAGS = -Wall -Wextra -D_POSIX_C_SOURCE=200809L
 ifeq ($(DEBUG), 1)
 _CFLAGS += -g -Og
 else

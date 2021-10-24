@@ -19,6 +19,7 @@
 	exit(EXIT_FAILURE); }
 
 static char compress;
+static char *img_type;
 
 static char *get_image_type_str(enum cif_image_type type) {
 	switch (type) {
@@ -112,19 +113,21 @@ static void add_images(cif_file *cif, int argc, char *argv[]) {
 
 	image_count = argc - optind - 1;
 
-	printf("Please select the image type. Possible values are:\n");
-	printf("Albedo (normal): 0\n");
-	printf("Roughness map: 1\n");
-	printf("Metallic map: 2\n");
-	printf("Normal map: 3\n");
-	printf("AO: 4\n");
-	printf("Cube map positive x: 5\n");
-	printf("Cube map negative x: 6\n");
-	printf("Cube map positive y: 7\n");
-	printf("Cube map negative y: 8\n");
-	printf("Cube map positive z: 9\n");
-	printf("Cube map negative z: 10\n");
-	printf("Environment map: 11\n");
+	if(!img_type) {
+		printf("Please select the image type. Possible values are:\n");
+		printf("Albedo (normal): 0\n");
+		printf("Roughness map: 1\n");
+		printf("Metallic map: 2\n");
+		printf("Normal map: 3\n");
+		printf("AO: 4\n");
+		printf("Cube map positive x: 5\n");
+		printf("Cube map negative x: 6\n");
+		printf("Cube map positive y: 7\n");
+		printf("Cube map negative y: 8\n");
+		printf("Cube map positive z: 9\n");
+		printf("Cube map negative z: 10\n");
+		printf("Environment map: 11\n");
+	}
 
 	for(i = 0; i < image_count; i++) {
 		png_image png;
@@ -132,7 +135,7 @@ static void add_images(cif_file *cif, int argc, char *argv[]) {
 		cif_image image;
 		char *extension;
 		char *image_name;
-		unsigned int index = argc - optind + 1 + i;
+		unsigned int index = optind + 1 + i;
 		char type[4];
 		int ty;
 
@@ -141,7 +144,7 @@ static void add_images(cif_file *cif, int argc, char *argv[]) {
 		png.opaque = NULL;
 
 		if(png_image_begin_read_from_file(&png, argv[index]) <= 0) {
-			fprintf(stderr, "%s\n", png.message);
+			fprintf(stderr, "libpng: %s\n", png.message);
 			png_image_free(&png);
 			exit(EXIT_FAILURE);
 		}
@@ -173,11 +176,15 @@ static void add_images(cif_file *cif, int argc, char *argv[]) {
 		image.size = PNG_IMAGE_SIZE(png);
 		image.data = data;
 
-		printf("Please select the image type for %s:", image.name);
-		fflush(stdout);
-		fgets(type, 4, stdin);
-		type[3] = '\0';
-		ty = atoi(type);
+		if(!img_type) {
+			printf("Please select the image type for %s: ", image.name);
+			fflush(stdout);
+			fgets(type, 4, stdin);
+			type[3] = '\0';
+			ty = atoi(type);
+		} else {
+			ty = atoi(img_type);
+		}
 
 		image.image_type = ty;
 
@@ -271,6 +278,7 @@ static void print_help(const char *prog_name) {
 	printf("\t-d Delete image[s] from cif file\n\n");
 	printf("Options are:\n");
 	printf("\t-c Compress newly added images\n");
+	printf("\t-t <type> Set the image type\n");
 	printf("\t-v Show verbose output\n");
 }
 
@@ -289,7 +297,10 @@ int main(int argc, char *argv[]) {
 	size_t image_count;
 	cif_image *images;
 
-	while((opt = getopt(argc, argv, "hladcv")) != -1) {
+	compress = 0;
+	img_type = NULL;
+
+	while((opt = getopt(argc, argv, "hladct:v")) != -1) {
 		switch (opt) {
 			case 'h':
 				print_help(argv[0]);
@@ -309,6 +320,9 @@ int main(int argc, char *argv[]) {
 				break;
 			case 'c':
 				compress = 1;
+				break;
+			case 't':
+				img_type = optarg;
 				break;
 			case 'v':
 				verbose = 1;

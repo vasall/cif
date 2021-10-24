@@ -3,3 +3,4 @@ libcif.so
 libcif.a
 cif
 *.cif
+*.png

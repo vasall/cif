@@ -1,13 +1,14 @@
-.Dd Jun 29, 2021
+.Dd Oct 24, 2021
 .Dt CIF 1
-.Os Linux
+.Os POSIX systems
 .Sh NAME
 .Nm cif
 .Nd creates and modifies cif files
 .Sh SYNOPSIS
 .Nm cif
-.Fl h | a | l | d
+.Fl h|a|l|d
 .Op Fl c
+.Op Fl t Ar image_type
 .Op Fl v
 .Ar cif file
 .Op Ar image ...
@@ -44,6 +45,37 @@ The optional arguments are as follows:
 .Bl -tag -width Ds
 .It Fl c
 Compress newly added images
+.It Fl t Ar image_type
+Don't interactively ask what image type the image is and set the type to the number specified with
+.Ar image_type
+ 
+Possible types are:
+.Bl -bullet -compact
+.It
+Albedo (normal): 0
+.It
+Roughness map: 1
+.It
+Metallic map: 2
+.It
+Normal map: 3
+.It
+AO: 4
+.It
+Cube map positive x: 5
+.It
+Cube map negative x: 6
+.It
+Cube map positive y: 7
+.It
+Cube map negative y: 8
+.It
+Cube map positive z: 9
+.It
+Cube map negative z: 10
+.It
+Environment map: 11
+.El
 .It Fl v
 Print verbose information
 .El
@@ -58,7 +90,6 @@ are the .png images that will be appended to the cif file, when using the
 operation
 
 .Pa /tmp/tmp.cif
-is a temporary file used when deleting images. May be chaged in the future
+is a temporary file used when deleting images. May be changed in the future
 .Sh EXIT STATUS
 .Ex -std
-.Sh SEE ALSO

@@ -212,6 +212,7 @@ cif_image *cif_get_images(cif_file *cif, size_t *image_count) {
 		if(images[*image_count].image_type >= 127) {
 			size_t new_size;
 			char *new_data;
+			enum cif_image_type new_type;
 			if(cif_uncompress(images[*image_count].size, images[*image_count].data,
 								&new_size, &new_data) < 0) {
 				fprintf(stderr, "Uncompression error\n");
@@ -222,9 +223,11 @@ cif_image *cif_get_images(cif_file *cif, size_t *image_count) {
 			cif->extra_alloc[cif->extra_alloc_num] = new_data;
 			cif->extra_alloc_num += 1;
 
+			new_type = images[*image_count].image_type % 256 - 127;
+
 			images[*image_count].size = new_size;
 			images[*image_count].data = new_data;
-			images[*image_count].image_type -= 127;
+			images[*image_count].image_type = new_type;
 		}
 #endif /* NO_ZLIB */
 
