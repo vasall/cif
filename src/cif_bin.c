@@ -10,7 +10,6 @@
 
 #include <png.h>
 
-#define CIF_WRITE
 #include "cif.h"
 
 #define CHECK_OP(op) if(op != OP_NULL) {\
@@ -20,6 +19,7 @@
 
 static char compress;
 static char *img_type;
+static char verbose;
 
 static char *get_image_type_str(enum cif_image_type type) {
 	switch (type) {
@@ -136,7 +136,6 @@ static void add_images(cif_file *cif, int argc, char *argv[]) {
 		char *extension;
 		char *image_name;
 		unsigned int index = optind + 1 + i;
-		char type[4];
 		int ty;
 
 		memset(&png, 0, sizeof(png_image));
@@ -164,6 +163,11 @@ static void add_images(cif_file *cif, int argc, char *argv[]) {
 		png_image_free(&png);
 
 		image_name = strdup(argv[index]);
+		if(!image_name) {
+			perror("strdup");
+			free(data);
+			exit(EXIT_FAILURE);
+		}
 		extension = strrchr(image_name, '.');
 		extension[0] = '\0';
 
@@ -177,9 +181,17 @@ static void add_images(cif_file *cif, int argc, char *argv[]) {
 		image.data = data;
 
 		if(!img_type) {
+			char type[4];
+			char *res;
 			printf("Please select the image type for %s: ", image.name);
 			fflush(stdout);
-			fgets(type, 4, stdin);
+			res = fgets(type, 4, stdin);
+			if(!res) {
+				free(data);
+				free(image_name);
+				fprintf(stderr, "Input reading failed\n");
+				exit(EXIT_FAILURE);
+			}
 			type[3] = '\0';
 			ty = atoi(type);
 		} else {
@@ -292,13 +304,13 @@ enum operation {
 int main(int argc, char *argv[]) {
 	int opt;
 	enum operation op = OP_NULL;
-	char verbose = 0;
 	cif_file *cif;
 	size_t image_count;
 	cif_image *images;
 
 	compress = 0;
 	img_type = NULL;
+	verbose = 0;
 
 	while((opt = getopt(argc, argv, "hladct:v")) != -1) {
 		switch (opt) {

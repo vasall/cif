@@ -24,14 +24,15 @@ make [NO_ZLIB=1] <all|bin|static|shared>
 Usage: cif <operation> [options] <cif-file> [image...]
 
 Operations are:
-        -h Show this help
-        -l List images in cif file
-        -a Add image[s] to cif file
-        -d Delete image[s] from cif file
+	-h Show this help
+	-l List images in cif file
+	-a Add image[s] to cif file
+	-d Delete image[s] from cif file
 
 Options are:
-        -c Compress newly added images
-        -v Show verbose output
+	-c Compress newly added images
+	-t <type> Set the image type
+	-v Show verbose output
 ```
 ## API
 See [cif.h](src/cif.h)

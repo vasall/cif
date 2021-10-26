@@ -1,4 +1,3 @@
-#define CIF_WRITE
 #include "cif.h"
 
 #include <stdio.h>
@@ -12,13 +11,13 @@
 #define CIF_MAGIC {0x73, 0x43, 0x49, 0x46, 0x01}
 #define CHUNK 16384
 
-typedef struct cif_file {
+struct cif_file {
 	char *data;
 	size_t size;
 	FILE *file;
 	void *extra_alloc[100];
 	size_t extra_alloc_num;
-} cif_file;
+};
 
 #ifndef NO_ZLIB
 static int cif_uncompress(size_t in_size, char *in_data, size_t *out_size,
@@ -33,6 +32,8 @@ static int cif_uncompress(size_t in_size, char *in_data, size_t *out_size,
 	stream.opaque = Z_NULL;
 	stream.avail_in = in_size;
 	stream.next_in = (unsigned char *) in_data;
+	stream.avail_out = 0;
+	stream.next_out = NULL;
 
 	ret = inflateInit(&stream);
 	if(ret != Z_OK)
@@ -124,14 +125,14 @@ cif_file *cif_open(const char *path) {
 	
 	file = fopen(path, "a+b");
 
+	if(!file)
+		goto err;
+
 	if(new) {
 		fwrite(magic_ref, 1, 5, file);
 		fflush(file);
 		fseek(file, 0, SEEK_SET);
 	}
-
-	if(!file)
-		goto err;
 
 	if(fread(magic, 1, 5, file) != 5)
 		goto err_file;
@@ -173,8 +174,10 @@ cif_image *cif_get_images(cif_file *cif, size_t *image_count) {
 	char *current;
 	cif_image *images;
 
-	if(!cif->size)
+	if(!cif->size) {
+		*image_count = 0;
 		return NULL;
+	}
 
 	images = NULL;
 	*image_count = 0;
@@ -213,6 +216,7 @@ cif_image *cif_get_images(cif_file *cif, size_t *image_count) {
 			size_t new_size;
 			char *new_data;
 			enum cif_image_type new_type;
+
 			if(cif_uncompress(images[*image_count].size, images[*image_count].data,
 								&new_size, &new_data) < 0) {
 				fprintf(stderr, "Uncompression error\n");
@@ -287,7 +291,7 @@ int cif_write_image(cif_file *cif, cif_image image) {
 	fwrite(image.data, 1, image.size, cif->file);
 
 #ifndef NO_ZLIB
-	if(image.image_format >= 127) {
+	if(image.image_type >= 127) {
 		free(image.data);
 	}
 #endif /* NO_ZLIB */

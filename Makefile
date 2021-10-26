@@ -10,7 +10,7 @@ TARGET_LIB ?= cif
 CC ?= gcc
 AR ?= gcc-ar
 RM ?= rm -f
-MKDIR ?= mkdir
+MKDIR ?= mkdir -p
 CP ?= cp
 
 # Directories
@@ -88,10 +88,10 @@ clean:
 	$(RM) $(OBJECTS_SHARED)
 
 install:
-	$(MKDIR) -p $(DESTDIR)$(prefix)/$(bindir)
-	$(MKDIR) -p $(DESTDIR)$(prefix)/$(includedir)
-	$(MKDIR) -p $(DESTDIR)$(prefix)/$(libdir)
-	$(MKDIR) -p $(DESTDIR)$(prefix)/$(datarootdir)/$(mandir)/man1
+	$(MKDIR) $(DESTDIR)$(prefix)/$(bindir)
+	$(MKDIR) $(DESTDIR)$(prefix)/$(includedir)
+	$(MKDIR) $(DESTDIR)$(prefix)/$(libdir)
+	$(MKDIR) $(DESTDIR)$(prefix)/$(datarootdir)/$(mandir)/man1
 	-$(CP) $(TARGET_BIN) $(DESTDIR)$(prefix)/$(bindir)
 	-$(CP) $(HEADER) $(DESTDIR)$(prefix)/$(includedir)
 	-$(CP) $(TARGET_STATIC) $(DESTDIR)$(prefix)/$(libdir)

@@ -1,9 +1,13 @@
-.Dd Oct 24, 2021
+.Dd Oct 26, 2021
 .Dt CIF 1
 .Os POSIX systems
+
+
 .Sh NAME
 .Nm cif
 .Nd creates and modifies cif files
+
+
 .Sh SYNOPSIS
 .Nm cif
 .Fl h|a|l|d
@@ -12,6 +16,8 @@
 .Op Fl v
 .Ar cif file
 .Op Ar image ...
+
+
 .Sh DESCRIPTION
 .Nm
 creates and modifies cif files. It can only perform one operation at a time on a
@@ -79,17 +85,21 @@ Environment map: 11
 .It Fl v
 Print verbose information
 .El
+
+
 .Sh FILES
 .Pa cif_file
 is the cif file the operation should be executed on. If no such file exists, one
 will be created
-
+ 
 .Pa png images
 are the .png images that will be appended to the cif file, when using the
 .Fl a
 operation
-
+ 
 .Pa /tmp/tmp.cif
 is a temporary file used when deleting images. May be changed in the future
+
+
 .Sh EXIT STATUS
 .Ex -std
