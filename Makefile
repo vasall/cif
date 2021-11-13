@@ -47,8 +47,6 @@ else
 LDLIBS_LIB = -lz
 endif
 
-CFLAGS := $(_CFLAGS) $(CFLAGS)
-
 # LDLIBS_LIB = 
 LDLIBS_BIN = $(LDLIBS_LIB) -lpng
 
@@ -74,10 +72,10 @@ $(TARGET_SHARED): $(OBJECTS_SHARED)
 	$(CC) -o $@ -shared $^ $(LDLIBS_SHARED)
 
 %.shared.o: %.c
-	$(CC) -o $@ -c -fPIC $(CFLAGS) $^
+	$(CC) -o $@ -c -fPIC $(_CFLAGS) $(CFLAGS) $^
 
 %.o: %.c
-	$(CC) -o $@ -c $(CFLAGS) $^
+	$(CC) -o $@ -c $(_CFLAGS) $(CFLAGS) $^
 
 clean:
 	$(RM) $(TARGET_BIN)

@@ -1,0 +1,20 @@
+name: Build Test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: make
+      run: make CFLAGS=-Werror
+    - name: install
+      run: DESTDIR=build make install
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v2.2.4
+      with:
+        path: build
+        retention-days: 7
