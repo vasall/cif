@@ -1,4 +1,4 @@
-# Clusterwerk Image Format
+# Clusterfuck Image Format
 CIF is a file format, which can contain one or more different images with
 different formats including mip mapping. It is designed for use in game engines
 
